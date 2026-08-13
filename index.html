@@ -1123,10 +1123,7 @@
         // ============================================
         // REPLACE THIS URL with your Google Apps Script deployment URL
         // Example: https://script.google.com/macros/s/AKfycbxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/exec
-        const API_URL = 'https://script.google.com/macros/s/AKfycbwJNEr_UNra9rUGSRjg55UjFiH1Qrx5f3CirwVdSQmcdPvXBaGKhQxP6ZuT6f7uXBWyQw/exec';
-
-        // If you want to use dummy data for testing without the backend, set this to true
-        const USE_DUMMY_DATA = false;
+        const API_URL = 'YOUR_GOOGLE_APPS_SCRIPT_URL';
 
         // ============================================
         // STATE
@@ -1136,94 +1133,62 @@
         let allTemplates = [];
         let allActivities = [];
         let currentPage = 'dashboard';
+        let useDummyData = false;
 
-        // ============================================
-        // DUMMY DATA FOR TESTING
-        // ============================================
-        function getDummyLeads() {
-            return [
-                { row: 2, leadId: 'LEAD-001', name: 'Rahul Sharma', company: 'ABC Corp', phone: '+919876543210',
-                    email: 'rahul@abc.com', source: 'Website', status: 'New', notes: 'Interested in marketing' },
-                { row: 3, leadId: 'LEAD-002', name: 'Priya Patel', company: 'XYZ Ltd', phone: '+919876543211',
-                    email: 'priya@xyz.com', source: 'Referral', status: 'Contacted', notes: 'Follow up next week' },
-                { row: 4, leadId: 'LEAD-003', name: 'Amit Kumar', company: 'Global Tech', phone: '+919876543212',
-                    email: 'amit@global.com', source: 'LinkedIn', status: 'Interested', notes: 'Wants demo' },
-                { row: 5, leadId: 'LEAD-004', name: 'Sneha Reddy', company: 'Innovate Inc', phone: '+919876543213',
-                    email: 'sneha@innovate.com', source: 'Event', status: 'Follow-Up', notes: 'Sent proposal' }
-            ];
-        }
-
-        function getDummyFollowups() {
-            const today = new Date();
-            const tomorrow = new Date(today);
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            const yesterday = new Date(today);
-            yesterday.setDate(yesterday.getDate() - 1);
-
-            return [
-                { id: 'FU-001', leadId: 'LEAD-001', leadName: 'Rahul Sharma', date: today.toISOString().split('T')[0],
-                    time: '10:00', type: 'WhatsApp', status: 'Pending', message: 'Follow up call', notes: '' },
-                { id: 'FU-002', leadId: 'LEAD-002', leadName: 'Priya Patel', date: tomorrow.toISOString().split('T')[0],
-                    time: '14:30', type: 'Call', status: 'Pending', message: 'Demo meeting', notes: '' },
-                { id: 'FU-003', leadId: 'LEAD-003', leadName: 'Amit Kumar', date: yesterday.toISOString().split('T')[0],
-                    time: '09:00', type: 'Email', status: 'Pending', message: 'Follow up on quote', notes: '' }
-            ];
-        }
-
-        function getDummyTemplates() {
-            return [
-                { id: 'TPL-001', name: 'Introduction', category: 'Introduction', body: 'Hello {{name}}, this is Sushant from GrowthScale. I came across {{company}} and wanted to connect regarding our marketing services.',
-                    usageCount: 5 },
-                { id: 'TPL-002', name: 'Follow-Up', category: 'Follow-Up', body: 'Hi {{name}}, following up on our discussion about marketing solutions for {{company}}.',
-                    usageCount: 3 },
-                { id: 'TPL-003', name: 'Price Quotation', category: 'Quotation', body: 'Hi {{name}}, as requested, here is the quotation for {{company}}:\n\n📋 Service: {{product}}\n💰 Amount: {{amount}}\n📅 Valid until: {{date}}',
-                    usageCount: 2 }
-            ];
-        }
-
-        function getDummyActivities() {
-            return [
-                { timestamp: new Date().toLocaleString(), actionBy: 'Sushant', actionType: 'Lead Created',
-                    leadName: 'Rahul Sharma', description: 'Lead "Rahul Sharma" created', status: 'Success' },
-                { timestamp: new Date(Date.now() - 3600000).toLocaleString(), actionBy: 'Sushant',
-                    actionType: 'WhatsApp Sent', leadName: 'Priya Patel', description: 'WhatsApp sent to Priya Patel',
-                    status: 'Success' },
-                { timestamp: new Date(Date.now() - 7200000).toLocaleString(), actionBy: 'System',
-                    actionType: 'Follow-Up Created', leadName: 'Amit Kumar', description: 'Follow-up scheduled for Amit Kumar',
-                    status: 'Success' }
-            ];
+        // Check if API is configured
+        if (API_URL === 'YOUR_GOOGLE_APPS_SCRIPT_URL') {
+            useDummyData = true;
+            console.warn('⚠️ Using dummy data - API_URL not configured');
+            showToast('Using dummy data for testing', 'info');
         }
 
         // ============================================
-        // API CALLS
+        // API CALLS - FIXED VERSION
         // ============================================
         function callAPI(action, data = {}) {
             return new Promise((resolve, reject) => {
-                // If using dummy data, return dummy responses
-                if (USE_DUMMY_DATA) {
+                if (useDummyData) {
                     resolve(handleDummyAPI(action, data));
                     return;
                 }
 
-                const params = new URLSearchParams({
-                    action: action,
-                    ...data
-                });
+                // Convert data to URLSearchParams
+                const params = new URLSearchParams();
+                params.append('action', action);
+                
+                // Add all data as JSON string
+                if (Object.keys(data).length > 0) {
+                    params.append('data', JSON.stringify(data));
+                }
+
+                // Log the request for debugging
+                console.log('Calling API:', action, data);
 
                 fetch(API_URL, {
                     method: 'POST',
-                    mode: 'no-cors',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
                     },
-                    body: params
+                    body: params.toString()
                 })
                 .then(response => {
-                    // With no-cors, we can't read the response properly
-                    // So we assume success if fetch doesn't throw
-                    resolve({ success: true, message: 'Request sent successfully' });
+                    // Try to parse JSON response
+                    return response.text().then(text => {
+                        try {
+                            const json = JSON.parse(text);
+                            return json;
+                        } catch (e) {
+                            // If not JSON, return as text
+                            return { success: true, message: text, raw: text };
+                        }
+                    });
+                })
+                .then(result => {
+                    console.log('API Response:', result);
+                    resolve(result);
                 })
                 .catch(error => {
+                    console.error('API Error:', error);
                     reject(error);
                 });
             });
@@ -1231,44 +1196,66 @@
 
         function callAPIGet(action) {
             return new Promise((resolve, reject) => {
-                if (USE_DUMMY_DATA) {
+                if (useDummyData) {
                     resolve(handleDummyAPI(action, {}));
                     return;
                 }
 
-                fetch(API_URL + '?action=' + action, {
+                const url = API_URL + '?action=' + encodeURIComponent(action);
+                console.log('Calling API GET:', url);
+
+                fetch(url, {
                     method: 'GET',
-                    mode: 'no-cors'
+                    headers: {
+                        'Accept': 'application/json',
+                    }
                 })
                 .then(response => {
-                    resolve({ success: true, data: [] });
+                    return response.text().then(text => {
+                        try {
+                            const json = JSON.parse(text);
+                            return json;
+                        } catch (e) {
+                            return { success: true, data: [], raw: text };
+                        }
+                    });
+                })
+                .then(result => {
+                    console.log('API GET Response:', result);
+                    resolve(result);
                 })
                 .catch(error => {
+                    console.error('API GET Error:', error);
                     reject(error);
                 });
             });
         }
 
         // ============================================
-        // DUMMY API HANDLER
+        // DUMMY DATA GENERATOR
         // ============================================
+        let dummyIdCounter = 100;
+
         function handleDummyAPI(action, data) {
+            console.log('Dummy API:', action, data);
+            
             switch (action) {
                 case 'getLeads':
-                    return { success: true, data: getDummyLeads() };
+                    return { success: true, data: allLeads.length > 0 ? allLeads : generateDummyLeads() };
                 case 'getFollowUps':
-                    return { success: true, data: getDummyFollowups() };
+                    return { success: true, data: allFollowups.length > 0 ? allFollowups : generateDummyFollowups() };
                 case 'getTemplates':
-                    return { success: true, data: getDummyTemplates() };
+                    return { success: true, data: allTemplates.length > 0 ? allTemplates : generateDummyTemplates() };
                 case 'getActivityLog':
-                    return { success: true, data: getDummyActivities() };
+                    return { success: true, data: allActivities.length > 0 ? allActivities : generateDummyActivities() };
                 case 'addNewLead':
-                    allLeads.push({ ...JSON.parse(data.leadData), row: allLeads.length + 2, leadId: 'LEAD-' + String(allLeads
-                            .length + 1).padStart(3, '0') });
-                    return { success: true, message: 'Lead added successfully!', leadId: 'LEAD-' + String(allLeads.length)
-                            .padStart(3, '0') };
+                    const newLead = JSON.parse(data.data.leadData || data.leadData);
+                    newLead.leadId = 'LEAD-' + String(++dummyIdCounter).padStart(3, '0');
+                    newLead.row = allLeads.length + 2;
+                    allLeads.push(newLead);
+                    return { success: true, message: 'Lead added successfully!', leadId: newLead.leadId };
                 case 'updateLead':
-                    const updateData = JSON.parse(data.leadData);
+                    const updateData = JSON.parse(data.data.leadData || data.leadData);
                     const idx = allLeads.findIndex(l => l.row == data.leadRow || l.leadId == data.leadRow);
                     if (idx > -1) allLeads[idx] = { ...allLeads[idx], ...updateData };
                     return { success: true, message: 'Lead updated successfully!' };
@@ -1277,12 +1264,14 @@
                     if (delIdx > -1) allLeads.splice(delIdx, 1);
                     return { success: true, message: 'Lead deleted successfully!' };
                 case 'createFollowUp':
-                    const fuData = JSON.parse(data.followUpData);
-                    allFollowups.push({ id: 'FU-' + String(allFollowups.length + 1).padStart(4, '0'),
-                        leadId: data.leadRow, leadName: 'Lead ' + data.leadRow, ...fuData });
+                    const fuData = JSON.parse(data.data.followUpData || data.followUpData);
+                    allFollowups.push({ 
+                        id: 'FU-' + String(allFollowups.length + 1).padStart(4, '0'),
+                        leadId: data.leadRow,
+                        leadName: 'Lead ' + data.leadRow,
+                        ...fuData 
+                    });
                     return { success: true, message: 'Follow-up created!' };
-                case 'updateFollowUp':
-                    return { success: true, message: 'Follow-up updated!' };
                 case 'completeFollowUp':
                     const fuIdx = allFollowups.findIndex(f => f.id == data.followUpId);
                     if (fuIdx > -1) allFollowups[fuIdx].status = 'Completed';
@@ -1292,13 +1281,16 @@
                     if (dFuIdx > -1) allFollowups.splice(dFuIdx, 1);
                     return { success: true, message: 'Follow-up deleted!' };
                 case 'addNewTemplate':
-                    const tData = JSON.parse(data.templateData);
-                    allTemplates.push({ id: 'TPL-' + String(allTemplates.length + 1).padStart(3, '0'), ...tData,
-                        usageCount: 0 });
+                    const tData = JSON.parse(data.data.templateData || data.templateData);
+                    allTemplates.push({ 
+                        id: 'TPL-' + String(allTemplates.length + 1).padStart(3, '0'), 
+                        ...tData,
+                        usageCount: 0 
+                    });
                     return { success: true, message: 'Template created!' };
                 case 'updateTemplate':
                     const tIdx = allTemplates.findIndex(t => t.id == data.templateId);
-                    if (tIdx > -1) allTemplates[tIdx] = { ...allTemplates[tIdx], ...JSON.parse(data.templateData) };
+                    if (tIdx > -1) allTemplates[tIdx] = { ...allTemplates[tIdx], ...JSON.parse(data.data.templateData || data.templateData) };
                     return { success: true, message: 'Template updated!' };
                 case 'deleteTemplate':
                     const dTIdx = allTemplates.findIndex(t => t.id == data.templateId);
@@ -1312,6 +1304,54 @@
                 default:
                     return { success: true, data: [] };
             }
+        }
+
+        function generateDummyLeads() {
+            return [
+                { row: 2, leadId: 'LEAD-001', name: 'Rahul Sharma', company: 'ABC Corp', phone: '+919876543210',
+                    email: 'rahul@abc.com', source: 'Website', status: 'New', notes: 'Interested in marketing' },
+                { row: 3, leadId: 'LEAD-002', name: 'Priya Patel', company: 'XYZ Ltd', phone: '+919876543211',
+                    email: 'priya@xyz.com', source: 'Referral', status: 'Contacted', notes: 'Follow up next week' },
+                { row: 4, leadId: 'LEAD-003', name: 'Amit Kumar', company: 'Global Tech', phone: '+919876543212',
+                    email: 'amit@global.com', source: 'LinkedIn', status: 'Interested', notes: 'Wants demo' }
+            ];
+        }
+
+        function generateDummyFollowups() {
+            const today = new Date();
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            
+            return [
+                { id: 'FU-001', leadId: 'LEAD-001', leadName: 'Rahul Sharma', date: today.toISOString().split('T')[0],
+                    time: '10:00', type: 'WhatsApp', status: 'Pending', message: 'Follow up call', notes: '' },
+                { id: 'FU-002', leadId: 'LEAD-002', leadName: 'Priya Patel', date: tomorrow.toISOString().split('T')[0],
+                    time: '14:30', type: 'Call', status: 'Pending', message: 'Demo meeting', notes: '' }
+            ];
+        }
+
+        function generateDummyTemplates() {
+            return [
+                { id: 'TPL-001', name: 'Introduction', category: 'Introduction', 
+                    body: 'Hello {{name}}, this is Sushant from GrowthScale. I came across {{company}} and wanted to connect regarding our marketing services.',
+                    usageCount: 5 },
+                { id: 'TPL-002', name: 'Follow-Up', category: 'Follow-Up', 
+                    body: 'Hi {{name}}, following up on our discussion about marketing solutions for {{company}}.',
+                    usageCount: 3 },
+                { id: 'TPL-003', name: 'Price Quotation', category: 'Quotation', 
+                    body: 'Hi {{name}}, as requested, here is the quotation for {{company}}:\n\n📋 Service: {{product}}\n💰 Amount: {{amount}}\n📅 Valid until: {{date}}',
+                    usageCount: 2 }
+            ];
+        }
+
+        function generateDummyActivities() {
+            return [
+                { timestamp: new Date().toLocaleString(), actionBy: 'Sushant', actionType: 'Lead Created',
+                    leadName: 'Rahul Sharma', description: 'Lead "Rahul Sharma" created', status: 'Success' },
+                { timestamp: new Date(Date.now() - 3600000).toLocaleString(), actionBy: 'Sushant',
+                    actionType: 'WhatsApp Sent', leadName: 'Priya Patel', description: 'WhatsApp sent to Priya Patel',
+                    status: 'Success' }
+            ];
         }
 
         // ============================================
@@ -1629,7 +1669,6 @@
                 const result = await callAPIGet('getTemplates');
                 allTemplates = result.data || [];
                 renderTemplates();
-                // Also update template dropdowns
                 updateTemplateDropdowns();
             } catch (error) {
                 showToast('Error loading templates: ' + error.message, 'error');
@@ -1666,29 +1705,20 @@
         }
 
         function updateTemplateDropdowns() {
-            // WhatsApp modal dropdown
-            const waSelect = document.getElementById('waTemplate');
-            const currentVal = waSelect.value;
-            waSelect.innerHTML = '<option value="custom">Custom Message</option>';
-            allTemplates.forEach(t => {
-                const opt = document.createElement('option');
-                opt.value = t.id || t.templateId;
-                opt.textContent = t.name;
-                waSelect.appendChild(opt);
+            const selects = ['waTemplate', 'bulkTemplate'];
+            selects.forEach(selectId => {
+                const select = document.getElementById(selectId);
+                if (!select) return;
+                const currentVal = select.value;
+                select.innerHTML = '<option value="custom">Custom Message</option>';
+                allTemplates.forEach(t => {
+                    const opt = document.createElement('option');
+                    opt.value = t.id || t.templateId;
+                    opt.textContent = t.name;
+                    select.appendChild(opt);
+                });
+                if (currentVal) select.value = currentVal;
             });
-            if (currentVal) waSelect.value = currentVal;
-
-            // Bulk send dropdown
-            const bulkSelect = document.getElementById('bulkTemplate');
-            const bulkVal = bulkSelect.value;
-            bulkSelect.innerHTML = '<option value="custom">Custom Message</option>';
-            allTemplates.forEach(t => {
-                const opt = document.createElement('option');
-                opt.value = t.id || t.templateId;
-                opt.textContent = t.name;
-                bulkSelect.appendChild(opt);
-            });
-            if (bulkVal) bulkSelect.value = bulkVal;
         }
 
         // ============================================
@@ -1803,6 +1833,7 @@
                 loadLeads();
                 loadDashboard();
             } catch (error) {
+                console.error('Save Lead Error:', error);
                 showToast('Error: ' + error.message, 'error');
             }
             showLoading(false);
@@ -1836,7 +1867,7 @@
             document.getElementById('waPreview').style.display = 'none';
             document.getElementById('waCharCount').textContent = (lead.notes || '').length;
 
-            // Templates are loaded already
+            updateTemplateDropdowns();
             openModal('whatsappModal');
         }
 
@@ -2088,6 +2119,7 @@
             document.getElementById('bulkLeadsPreview').innerHTML = '<p style="color:#999;">Select filters to see leads</p>';
             document.getElementById('bulkCount').textContent = '0 leads';
             document.getElementById('bulkProgress').textContent = '';
+            updateTemplateDropdowns();
             filterBulkLeads();
             openModal('bulkModal');
         }
@@ -2110,7 +2142,6 @@
             if (status !== 'all') {
                 filtered = filtered.filter(l => l.status === status);
             }
-            // Only leads with phone numbers
             filtered = filtered.filter(l => l.phone);
             bulkLeads = filtered;
 
@@ -2128,7 +2159,6 @@
             document.getElementById('bulkCount').textContent = filtered.length + ' leads';
         }
 
-        // Listen to filter changes
         document.getElementById('bulkStatusFilter').addEventListener('change', filterBulkLeads);
 
         async function startBulkSend() {
@@ -2154,7 +2184,6 @@
                     if (result.success && result.whatsappUrl) {
                         window.open(result.whatsappUrl, '_blank');
                     }
-                    // Small delay to prevent browser blocking
                     await new Promise(r => setTimeout(r, 500));
                 } catch (error) {
                     showToast('Error sending to ' + lead.name, 'error');
@@ -2177,22 +2206,12 @@
             document.getElementById('waCharCount').textContent = this.value.length;
         });
 
-        // Check if API_URL is configured
-        if (API_URL === 'YOUR_GOOGLE_APPS_SCRIPT_URL') {
-            console.warn('⚠️ Please set your Google Apps Script URL in the API_URL variable');
-            if (!USE_DUMMY_DATA) {
-                showToast('⚠️ API URL not configured. Using dummy data for testing.', 'info');
-                // Set USE_DUMMY_DATA to true temporarily
-                // But we'll use the actual value from the variable
-            }
-        }
+        console.log('WhatsApp CRM loaded successfully!');
+        console.log('API_URL:', API_URL);
+        console.log('Using dummy data:', useDummyData);
 
         // Load dashboard on start
         loadDashboard();
-
-        console.log('WhatsApp CRM loaded successfully!');
-        console.log('To connect to your Google Apps Script backend, set API_URL to your deployment URL.');
-        console.log('Current mode:', USE_DUMMY_DATA ? 'DUMMY DATA' : 'LIVE API');
     </script>
 
 </body>
