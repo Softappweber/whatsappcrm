@@ -1,0 +1,2092 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp CRM</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Reset & Base */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
+            color: #333;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Layout */
+        .app-container {
+            display: flex;
+            height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 70px;
+            background: #1a1a2e;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 0;
+            flex-shrink: 0;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
+            z-index: 100;
+        }
+        .sidebar .logo {
+            font-size: 28px;
+            margin-bottom: 30px;
+            color: #25D366;
+        }
+        .sidebar .nav-item {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            margin: 5px 0;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: #888;
+            font-size: 20px;
+            position: relative;
+        }
+        .sidebar .nav-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+        .sidebar .nav-item.active {
+            background: #25D366;
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(37, 211, 102, 0.3);
+        }
+        .sidebar .nav-item .badge {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            background: #ff4757;
+            color: white;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 50%;
+        }
+        .sidebar .nav-item span {
+            font-size: 10px;
+            position: absolute;
+            bottom: -18px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .sidebar .nav-item:hover span {
+            opacity: 1;
+        }
+        .sidebar .nav-item.active span {
+            opacity: 1;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Top Bar */
+        .top-bar {
+            background: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #e0e0e0;
+            flex-shrink: 0;
+        }
+        .top-bar h1 {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1a1a2e;
+        }
+        .top-bar h1 i {
+            color: #25D366;
+            margin-right: 10px;
+        }
+        .top-bar .actions {
+            display: flex;
+            gap: 10px;
+        }
+        .top-bar .actions button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-primary {
+            background: #25D366;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #1da851;
+            transform: translateY(-1px);
+        }
+        .btn-outline {
+            background: transparent;
+            color: #1a1a2e;
+            border: 1px solid #ddd;
+        }
+        .btn-outline:hover {
+            background: #f0f2f5;
+        }
+        .btn-danger {
+            background: #ff4757;
+            color: white;
+        }
+        .btn-danger:hover {
+            background: #d63031;
+        }
+
+        /* Page Content */
+        .page-content {
+            flex: 1;
+            padding: 20px 30px;
+            overflow-y: auto;
+            background: #f0f2f5;
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            transition: transform 0.3s;
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+        }
+        .stat-card .label {
+            font-size: 13px;
+            color: #888;
+            margin-bottom: 5px;
+        }
+        .stat-card .value {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1a1a2e;
+        }
+        .stat-card .sub {
+            font-size: 12px;
+            color: #999;
+            margin-top: 5px;
+        }
+        .stat-card .icon {
+            float: right;
+            font-size: 32px;
+            opacity: 0.2;
+        }
+        .stat-card.green .value {
+            color: #25D366;
+        }
+        .stat-card.blue .value {
+            color: #1a73e8;
+        }
+        .stat-card.yellow .value {
+            color: #f4b400;
+        }
+        .stat-card.red .value {
+            color: #ff4757;
+        }
+
+        /* Table */
+        .table-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        .table-header {
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #eee;
+        }
+        .table-header h3 {
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .table-header .search-box {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .table-header .search-box input {
+            padding: 8px 14px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 13px;
+            width: 200px;
+        }
+        .table-header .search-box select {
+            padding: 8px 14px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 13px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        thead {
+            background: #f8f9fa;
+        }
+        th {
+            padding: 12px 16px;
+            text-align: left;
+            font-size: 12px;
+            font-weight: 600;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        td {
+            padding: 12px 16px;
+            font-size: 14px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        tr:hover {
+            background: #f8f9fa;
+        }
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            display: inline-block;
+        }
+        .status-new {
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+        .status-contacted {
+            background: #fff3e0;
+            color: #e65100;
+        }
+        .status-interested {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        .status-followup {
+            background: #fce4ec;
+            color: #c62828;
+        }
+        .status-won {
+            background: #25D366;
+            color: white;
+        }
+        .status-lost {
+            background: #ff4757;
+            color: white;
+        }
+        .table-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .table-actions button {
+            padding: 4px 8px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .btn-whatsapp {
+            background: #25D366;
+            color: white;
+        }
+        .btn-whatsapp:hover {
+            background: #1da851;
+        }
+        .btn-edit {
+            background: #1a73e8;
+            color: white;
+        }
+        .btn-edit:hover {
+            background: #1557b0;
+        }
+        .btn-delete {
+            background: #ff4757;
+            color: white;
+        }
+        .btn-delete:hover {
+            background: #d63031;
+        }
+        .btn-followup {
+            background: #f4b400;
+            color: white;
+        }
+        .btn-followup:hover {
+            background: #e6a800;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal {
+            background: white;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow: hidden;
+            animation: slideUp 0.3s;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        .modal-header {
+            padding: 20px 25px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-header h2 {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        .modal-header .close {
+            cursor: pointer;
+            font-size: 24px;
+            color: #999;
+            transition: color 0.3s;
+            background: none;
+            border: none;
+        }
+        .modal-header .close:hover {
+            color: #333;
+        }
+        .modal-body {
+            padding: 25px;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+        .modal-footer {
+            padding: 15px 25px;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            background: #f8f9fa;
+        }
+
+        /* Form */
+        .form-group {
+            margin-bottom: 18px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 5px;
+        }
+        .form-group label .required {
+            color: #ff4757;
+        }
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.3s;
+        }
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #25D366;
+            box-shadow: 0 0 0 3px rgba(37, 211, 102, 0.1);
+        }
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        /* Success/Error Messages */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            padding: 15px 25px;
+            border-radius: 12px;
+            color: white;
+            font-weight: 500;
+            z-index: 2000;
+            animation: slideIn 0.5s;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            display: none;
+        }
+        .toast.success {
+            background: #25D366;
+        }
+        .toast.error {
+            background: #ff4757;
+        }
+        .toast.info {
+            background: #1a73e8;
+        }
+        .toast.show {
+            display: block;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 5px;
+            border-bottom: 2px solid #eee;
+            margin-bottom: 20px;
+        }
+        .tabs button {
+            padding: 10px 20px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: #888;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+        }
+        .tabs button:hover {
+            color: #333;
+        }
+        .tabs button.active {
+            color: #25D366;
+            border-bottom-color: #25D366;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+        @keyframes slideUp {
+            from {
+                transform: translateY(50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        @keyframes slideIn {
+            from {
+                transform: translateX(100px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 60px;
+                padding: 15px 0;
+            }
+            .sidebar .nav-item {
+                width: 40px;
+                height: 40px;
+                font-size: 16px;
+            }
+            .top-bar {
+                padding: 12px 15px;
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+            .top-bar h1 {
+                font-size: 16px;
+            }
+            .page-content {
+                padding: 15px;
+            }
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            .table-header {
+                flex-direction: column;
+                gap: 10px;
+            }
+            .table-header .search-box {
+                width: 100%;
+            }
+            .table-header .search-box input {
+                width: 100%;
+            }
+            .modal {
+                width: 95%;
+                max-height: 95vh;
+            }
+        }
+        @media (max-width: 480px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            .sidebar .nav-item span {
+                display: none;
+            }
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            z-index: 999;
+            justify-content: center;
+            align-items: center;
+        }
+        .loading-overlay.active {
+            display: flex;
+        }
+        .loading-box {
+            background: white;
+            padding: 30px 40px;
+            border-radius: 16px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+        }
+        .loading-box .spinner {
+            width: 40px;
+            height: 40px;
+            border-width: 4px;
+            border-color: #25D366;
+            border-top-color: transparent;
+        }
+        .loading-box p {
+            margin-top: 15px;
+            color: #555;
+        }
+
+        /* Template List in Modal */
+        .template-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .template-item {
+            padding: 10px 14px;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .template-item:hover {
+            background: #f0f2f5;
+            border-color: #25D366;
+        }
+        .template-item .name {
+            font-weight: 500;
+        }
+        .template-item .category {
+            font-size: 12px;
+            color: #888;
+        }
+        .template-item .usage {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-box">
+            <div class="spinner"></div>
+            <p>Loading...</p>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <!-- App Container -->
+    <div class="app-container">
+
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="logo"><i class="fab fa-whatsapp"></i></div>
+            <div class="nav-item active" data-page="dashboard" onclick="switchPage('dashboard')" title="Dashboard">
+                <i class="fas fa-chart-pie"></i>
+                <span>Dashboard</span>
+            </div>
+            <div class="nav-item" data-page="leads" onclick="switchPage('leads')" title="Leads">
+                <i class="fas fa-users"></i>
+                <span>Leads</span>
+            </div>
+            <div class="nav-item" data-page="followups" onclick="switchPage('followups')" title="Follow-ups">
+                <i class="fas fa-calendar-check"></i>
+                <span>Follow-ups</span>
+            </div>
+            <div class="nav-item" data-page="templates" onclick="switchPage('templates')" title="Templates">
+                <i class="fas fa-envelope"></i>
+                <span>Templates</span>
+            </div>
+            <div class="nav-item" data-page="activity" onclick="switchPage('activity')" title="Activity">
+                <i class="fas fa-history"></i>
+                <span>Activity</span>
+            </div>
+            <div style="flex:1;"></div>
+            <div class="nav-item" onclick="refreshData()" title="Refresh">
+                <i class="fas fa-sync"></i>
+                <span>Refresh</span>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+
+            <!-- Top Bar -->
+            <div class="top-bar">
+                <h1><i class="fab fa-whatsapp"></i> <span id="pageTitle">Dashboard</span></h1>
+                <div class="actions">
+                    <button class="btn-primary" onclick="openAddLeadModal()"><i class="fas fa-plus"></i> Add Lead</button>
+                    <button class="btn-outline" onclick="openBulkSendModal()"><i class="fas fa-paper-plane"></i> Bulk Send</button>
+                    <button class="btn-outline" onclick="refreshData()"><i class="fas fa-sync"></i></button>
+                </div>
+            </div>
+
+            <!-- Page Content -->
+            <div class="page-content" id="pageContent">
+
+                <!-- DASHBOARD PAGE -->
+                <div id="page-dashboard">
+                    <div class="stats-grid" id="dashboardStats">
+                        <!-- Stats will be loaded here -->
+                    </div>
+                    <div class="table-container">
+                        <div class="table-header">
+                            <h3>📅 Today's Follow-ups</h3>
+                            <span id="todayCount" style="color:#888;font-size:13px;">0</span>
+                        </div>
+                        <div id="todayFollowups">
+                            <p style="padding:20px;text-align:center;color:#999;">No follow-ups scheduled for today.</p>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <div class="table-header">
+                            <h3>🔴 Overdue Follow-ups</h3>
+                            <span id="overdueCount" style="color:#ff4757;font-size:13px;">0</span>
+                        </div>
+                        <div id="overdueFollowups">
+                            <p style="padding:20px;text-align:center;color:#999;">No overdue follow-ups.</p>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <div class="table-header">
+                            <h3>📋 Recent Activity</h3>
+                        </div>
+                        <div id="recentActivity">
+                            <p style="padding:20px;text-align:center;color:#999;">No recent activity.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- LEADS PAGE -->
+                <div id="page-leads" style="display:none;">
+                    <div class="table-container">
+                        <div class="table-header">
+                            <h3>👥 All Leads</h3>
+                            <div class="search-box">
+                                <input type="text" id="leadSearch" placeholder="Search leads..." oninput="filterLeads()">
+                                <select id="leadStatusFilter" onchange="filterLeads()">
+                                    <option value="all">All Status</option>
+                                    <option value="New">New</option>
+                                    <option value="Contacted">Contacted</option>
+                                    <option value="Interested">Interested</option>
+                                    <option value="Follow-Up">Follow-Up</option>
+                                    <option value="Won">Won</option>
+                                    <option value="Lost">Lost</option>
+                                    <option value="Not Interested">Not Interested</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div style="overflow-x:auto;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Lead ID</th>
+                                        <th>Name</th>
+                                        <th>Company</th>
+                                        <th>Phone</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="leadsTableBody">
+                                    <tr><td colspan="6" style="text-align:center;padding:30px;color:#999;">Loading leads...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FOLLOW-UPS PAGE -->
+                <div id="page-followups" style="display:none;">
+                    <div class="table-container">
+                        <div class="table-header">
+                            <h3>📅 All Follow-ups</h3>
+                            <div class="search-box">
+                                <select id="followupStatusFilter" onchange="filterFollowups()">
+                                    <option value="all">All Status</option>
+                                    <option value="Pending">Pending</option>
+                                    <option value="Completed">Completed</option>
+                                    <option value="Cancelled">Cancelled</option>
+                                    <option value="Rescheduled">Rescheduled</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div style="overflow-x:auto;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Lead</th>
+                                        <th>Date</th>
+                                        <th>Type</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="followupsTableBody">
+                                    <tr><td colspan="6" style="text-align:center;padding:30px;color:#999;">Loading follow-ups...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TEMPLATES PAGE -->
+                <div id="page-templates" style="display:none;">
+                    <div class="table-container">
+                        <div class="table-header">
+                            <h3>📋 Message Templates</h3>
+                            <button class="btn-primary" onclick="openTemplateModal()"><i class="fas fa-plus"></i> New Template</button>
+                        </div>
+                        <div style="overflow-x:auto;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Name</th>
+                                        <th>Category</th>
+                                        <th>Usage</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="templatesTableBody">
+                                    <tr><td colspan="5" style="text-align:center;padding:30px;color:#999;">Loading templates...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ACTIVITY PAGE -->
+                <div id="page-activity" style="display:none;">
+                    <div class="table-container">
+                        <div class="table-header">
+                            <h3>📜 Activity Log</h3>
+                            <button class="btn-danger" onclick="clearActivityLog()"><i class="fas fa-trash"></i> Clear Log</button>
+                        </div>
+                        <div style="overflow-x:auto;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Timestamp</th>
+                                        <th>Action By</th>
+                                        <th>Action Type</th>
+                                        <th>Lead</th>
+                                        <th>Description</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="activityTableBody">
+                                    <tr><td colspan="6" style="text-align:center;padding:30px;color:#999;">Loading activity...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== MODALS ========== -->
+
+    <!-- Add/Edit Lead Modal -->
+    <div class="modal-overlay" id="leadModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="leadModalTitle">Add New Lead</h2>
+                <button class="close" onclick="closeModal('leadModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Full Name <span class="required">*</span></label>
+                    <input type="text" id="leadName" placeholder="Enter lead's full name">
+                </div>
+                <div class="form-group">
+                    <label>Company</label>
+                    <input type="text" id="leadCompany" placeholder="Enter company name">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Phone <span class="required">*</span></label>
+                        <input type="text" id="leadPhone" placeholder="+919876543210">
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="leadEmail" placeholder="email@example.com">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Lead Source</label>
+                        <select id="leadSource">
+                            <option value="Website">Website</option>
+                            <option value="Referral">Referral</option>
+                            <option value="Social Media">Social Media</option>
+                            <option value="Email">Email</option>
+                            <option value="Phone">Phone</option>
+                            <option value="Event">Event</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select id="leadStatus">
+                            <option value="New">New</option>
+                            <option value="Contacted">Contacted</option>
+                            <option value="Interested">Interested</option>
+                            <option value="Follow-Up">Follow-Up</option>
+                            <option value="Won">Won</option>
+                            <option value="Lost">Lost</option>
+                            <option value="Not Interested">Not Interested</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Notes</label>
+                    <textarea id="leadNotes" placeholder="Add any notes about this lead..."></textarea>
+                </div>
+                <input type="hidden" id="editLeadRow" value="">
+            </div>
+            <div class="modal-footer">
+                <button class="btn-outline" onclick="closeModal('leadModal')">Cancel</button>
+                <button class="btn-primary" onclick="saveLead()"><i class="fas fa-save"></i> Save Lead</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Send WhatsApp Modal -->
+    <div class="modal-overlay" id="whatsappModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2><i class="fab fa-whatsapp" style="color:#25D366;"></i> Send WhatsApp</h2>
+                <button class="close" onclick="closeModal('whatsappModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="whatsappLeadInfo" style="background:#e8f5e9;padding:12px 16px;border-radius:8px;margin-bottom:15px;">
+                    <strong>Lead:</strong> <span id="waLeadName"></span>
+                    <span style="margin-left:15px;"><strong>Phone:</strong> <span id="waLeadPhone"></span></span>
+                </div>
+                <div class="form-group">
+                    <label>Template</label>
+                    <select id="waTemplate" onchange="onWATemplateChange()">
+                        <option value="custom">Custom Message</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Message <span class="required">*</span></label>
+                    <textarea id="waMessage" placeholder="Type your message..."></textarea>
+                    <div style="font-size:12px;color:#999;text-align:right;margin-top:3px;"><span id="waCharCount">0</span> characters</div>
+                </div>
+                <div id="waPreview" style="display:none;background:#f8f9fa;padding:12px;border-radius:8px;border:1px solid #ddd;margin-top:10px;white-space:pre-wrap;font-size:13px;"></div>
+                <input type="hidden" id="waLeadRow" value="">
+            </div>
+            <div class="modal-footer">
+                <button class="btn-outline" onclick="closeModal('whatsappModal')">Cancel</button>
+                <button class="btn-outline" onclick="previewWAMessage()"><i class="fas fa-eye"></i> Preview</button>
+                <button class="btn-primary" onclick="sendWAMessage()" style="background:#25D366;"><i class="fab fa-whatsapp"></i> Open WhatsApp</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Follow-up Modal -->
+    <div class="modal-overlay" id="followupModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>📅 Create Follow-Up</h2>
+                <button class="close" onclick="closeModal('followupModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="fuLeadInfo" style="background:#e8f0fe;padding:12px 16px;border-radius:8px;margin-bottom:15px;">
+                    <strong>Lead:</strong> <span id="fuLeadName"></span>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Date <span class="required">*</span></label>
+                        <input type="date" id="fuDate">
+                    </div>
+                    <div class="form-group">
+                        <label>Time</label>
+                        <input type="time" id="fuTime" value="10:00">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Type</label>
+                        <select id="fuType">
+                            <option value="WhatsApp">WhatsApp</option>
+                            <option value="Call">Call</option>
+                            <option value="Email">Email</option>
+                            <option value="Meeting">Meeting</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select id="fuStatus">
+                            <option value="Pending">Pending</option>
+                            <option value="Completed">Completed</option>
+                            <option value="Cancelled">Cancelled</option>
+                            <option value="Rescheduled">Rescheduled</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Message / Notes</label>
+                    <textarea id="fuMessage" placeholder="Add message or notes..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Additional Notes</label>
+                    <textarea id="fuNotes" placeholder="Any additional notes..." rows="2"></textarea>
+                </div>
+                <input type="hidden" id="fuLeadRow" value="">
+                <input type="hidden" id="editFollowupId" value="">
+            </div>
+            <div class="modal-footer">
+                <button class="btn-outline" onclick="closeModal('followupModal')">Cancel</button>
+                <button class="btn-danger" id="fuDeleteBtn" style="display:none;" onclick="deleteFollowup()"><i class="fas fa-trash"></i> Delete</button>
+                <button class="btn-primary" onclick="saveFollowup()"><i class="fas fa-save"></i> Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Template Modal -->
+    <div class="modal-overlay" id="templateModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="templateModalTitle">New Template</h2>
+                <button class="close" onclick="closeModal('templateModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Template Name <span class="required">*</span></label>
+                    <input type="text" id="tplName" placeholder="e.g., Welcome Message">
+                </div>
+                <div class="form-group">
+                    <label>Category</label>
+                    <select id="tplCategory">
+                        <option value="Introduction">Introduction</option>
+                        <option value="Follow-Up">Follow-Up</option>
+                        <option value="Quotation">Quotation</option>
+                        <option value="Reminder">Reminder</option>
+                        <option value="Thank You">Thank You</option>
+                        <option value="Promotional">Promotional</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Message Body <span class="required">*</span></label>
+                    <textarea id="tplBody" placeholder="Type message with variables: {{name}}, {{company}}, {{product}}, {{amount}}, {{date}}"></textarea>
+                </div>
+                <div style="background:#e8f0fe;padding:8px 12px;border-radius:6px;font-size:12px;color:#555;">
+                    <strong>Variables:</strong> {{name}} {{company}} {{product}} {{amount}} {{date}}
+                </div>
+                <input type="hidden" id="editTemplateId" value="">
+            </div>
+            <div class="modal-footer">
+                <button class="btn-outline" onclick="closeModal('templateModal')">Cancel</button>
+                <button class="btn-danger" id="tplDeleteBtn" style="display:none;" onclick="deleteTemplate()"><i class="fas fa-trash"></i> Delete</button>
+                <button class="btn-primary" onclick="saveTemplate()"><i class="fas fa-save"></i> Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Send Modal -->
+    <div class="modal-overlay" id="bulkModal">
+        <div class="modal" style="max-width:700px;">
+            <div class="modal-header">
+                <h2><i class="fas fa-paper-plane" style="color:#25D366;"></i> Bulk Send WhatsApp</h2>
+                <button class="close" onclick="closeModal('bulkModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Select Template</label>
+                    <select id="bulkTemplate" onchange="onBulkTemplateChange()">
+                        <option value="custom">Custom Message</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Message <span class="required">*</span></label>
+                    <textarea id="bulkMessage" placeholder="Type your message..." rows="4"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Filter by Status</label>
+                    <select id="bulkStatusFilter">
+                        <option value="all">All Status</option>
+                        <option value="New">New</option>
+                        <option value="Contacted">Contacted</option>
+                        <option value="Interested">Interested</option>
+                        <option value="Follow-Up">Follow-Up</option>
+                        <option value="Won">Won</option>
+                        <option value="Lost">Lost</option>
+                        <option value="Not Interested">Not Interested</option>
+                    </select>
+                </div>
+                <div id="bulkLeadsPreview" style="background:#f8f9fa;padding:12px;border-radius:8px;max-height:200px;overflow-y:auto;font-size:13px;">
+                    <p style="color:#999;">Select filters to see leads</p>
+                </div>
+                <div style="margin-top:10px;">
+                    <span id="bulkCount" style="font-weight:500;">0 leads</span>
+                    <span id="bulkProgress" style="margin-left:15px;color:#888;"></span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-outline" onclick="closeModal('bulkModal')">Cancel</button>
+                <button class="btn-primary" onclick="startBulkSend()" style="background:#25D366;"><i class="fab fa-whatsapp"></i> Send All</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== JAVASCRIPT ========== -->
+    <script>
+        // ============================================
+        // CONFIGURATION
+        // ============================================
+        const API_URL = 'https://script.google.com/macros/s/AKfycbwJNEr_UNra9rUGSRjg55UjFiH1Qrx5f3CirwVdSQmcdPvXBaGKhQxP6ZuT6f7uXBWyQw/exec'; // Replace with your actual URL
+
+        // ============================================
+        // STATE
+        // ============================================
+        let allLeads = [];
+        let allFollowups = [];
+        let allTemplates = [];
+        let allActivities = [];
+        let currentPage = 'dashboard';
+        let isSending = false;
+
+        // ============================================
+        // API CALLS
+        // ============================================
+        function callAPI(action, data = {}) {
+            return new Promise((resolve, reject) => {
+                const params = new URLSearchParams({
+                    action: action,
+                    ...data
+                });
+
+                fetch(API_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: params
+                })
+                .then(response => response.text())
+                .then(text => {
+                    try {
+                        const result = JSON.parse(text);
+                        resolve(result);
+                    } catch (e) {
+                        resolve({ success: true, data: text });
+                    }
+                })
+                .catch(error => {
+                    reject(error);
+                });
+            });
+        }
+
+        function callAPIGet(action) {
+            return new Promise((resolve, reject) => {
+                fetch(API_URL + '?action=' + action, {
+                    method: 'GET',
+                    mode: 'no-cors'
+                })
+                .then(response => response.text())
+                .then(text => {
+                    try {
+                        const result = JSON.parse(text);
+                        resolve(result);
+                    } catch (e) {
+                        resolve({ success: true, data: text });
+                    }
+                })
+                .catch(error => {
+                    reject(error);
+                });
+            });
+        }
+
+        // ============================================
+        // TOAST / LOADING
+        // ============================================
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'toast ' + type + ' show';
+            clearTimeout(toast._timeout);
+            toast._timeout = setTimeout(() => {
+                toast.classList.remove('show');
+            }, 4000);
+        }
+
+        function showLoading(show) {
+            document.getElementById('loadingOverlay').classList.toggle('active', show);
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+        }
+
+        function openModal(id) {
+            document.getElementById(id).classList.add('active');
+        }
+
+        // ============================================
+        // PAGE SWITCHING
+        // ============================================
+        function switchPage(page) {
+            currentPage = page;
+            const pages = ['dashboard', 'leads', 'followups', 'templates', 'activity'];
+            pages.forEach(p => {
+                document.getElementById('page-' + p).style.display = p === page ? 'block' : 'none';
+            });
+            document.querySelectorAll('.nav-item').forEach(el => {
+                el.classList.toggle('active', el.dataset.page === page);
+            });
+            const titles = {
+                dashboard: 'Dashboard',
+                leads: 'Leads',
+                followups: 'Follow-ups',
+                templates: 'Templates',
+                activity: 'Activity Log'
+            };
+            document.getElementById('pageTitle').textContent = titles[page] || 'Dashboard';
+
+            // Load data for page
+            if (page === 'dashboard') loadDashboard();
+            else if (page === 'leads') loadLeads();
+            else if (page === 'followups') loadFollowups();
+            else if (page === 'templates') loadTemplates();
+            else if (page === 'activity') loadActivity();
+        }
+
+        // ============================================
+        // REFRESH
+        // ============================================
+        function refreshData() {
+            showToast('Refreshing data...', 'info');
+            if (currentPage === 'dashboard') loadDashboard();
+            else if (currentPage === 'leads') loadLeads();
+            else if (currentPage === 'followups') loadFollowups();
+            else if (currentPage === 'templates') loadTemplates();
+            else if (currentPage === 'activity') loadActivity();
+        }
+
+        // ============================================
+        // DASHBOARD
+        // ============================================
+        async function loadDashboard() {
+            showLoading(true);
+            try {
+                // Get all data for dashboard
+                const [leads, followups, activities] = await Promise.all([
+                    callAPIGet('getLeads'),
+                    callAPIGet('getFollowUps'),
+                    callAPIGet('getActivityLog')
+                ]);
+
+                allLeads = leads.data || [];
+                allFollowups = followups.data || [];
+                allActivities = activities.data || [];
+
+                // Stats
+                const total = allLeads.length;
+                const statusCounts = { New: 0, Contacted: 0, Interested: 0, 'Follow-Up': 0, Won: 0, Lost: 0, 'Not Interested': 0 };
+                allLeads.forEach(l => {
+                    if (statusCounts.hasOwnProperty(l.status)) statusCounts[l.status]++;
+                });
+
+                const today = new Date().toDateString();
+                const todayFU = allFollowups.filter(f => {
+                    const d = new Date(f.date);
+                    return d.toDateString() === today && f.status === 'Pending';
+                });
+                const overdueFU = allFollowups.filter(f => {
+                    const d = new Date(f.date);
+                    return d < new Date() && f.status === 'Pending';
+                });
+
+                document.getElementById('dashboardStats').innerHTML = `
+                    <div class="stat-card blue">
+                        <div class="icon"><i class="fas fa-users"></i></div>
+                        <div class="label">Total Leads</div>
+                        <div class="value">${total}</div>
+                    </div>
+                    <div class="stat-card green">
+                        <div class="icon"><i class="fas fa-check-circle"></i></div>
+                        <div class="label">Won</div>
+                        <div class="value">${statusCounts.Won || 0}</div>
+                        <div class="sub">${total > 0 ? ((statusCounts.Won/total)*100).toFixed(1) : 0}% conversion</div>
+                    </div>
+                    <div class="stat-card yellow">
+                        <div class="icon"><i class="fas fa-calendar-day"></i></div>
+                        <div class="label">Today's Follow-ups</div>
+                        <div class="value">${todayFU.length}</div>
+                    </div>
+                    <div class="stat-card red">
+                        <div class="icon"><i class="fas fa-exclamation-triangle"></i></div>
+                        <div class="label">Overdue</div>
+                        <div class="value">${overdueFU.length}</div>
+                    </div>
+                `;
+
+                document.getElementById('todayCount').textContent = todayFU.length + ' today';
+                document.getElementById('todayFollowups').innerHTML = todayFU.length > 0 ?
+                    `<table><tbody>${todayFU.map(f => `
+                        <tr>
+                            <td><strong>${f.leadName || 'Unknown'}</strong></td>
+                            <td>${f.type || 'WhatsApp'}</td>
+                            <td>${f.time || ''}</td>
+                            <td>
+                                <button class="btn-whatsapp" onclick="openWhatsAppForLead('${f.leadId}')" style="padding:4px 12px;border:none;border-radius:4px;font-size:12px;">
+                                    <i class="fab fa-whatsapp"></i>
+                                </button>
+                                <button class="btn-followup" onclick="completeFollowup('${f.id}')" style="padding:4px 12px;border:none;border-radius:4px;font-size:12px;">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('')}</tbody></table>` :
+                    `<p style="padding:20px;text-align:center;color:#999;">No follow-ups scheduled for today.</p>`;
+
+                document.getElementById('overdueCount').textContent = overdueFU.length + ' overdue';
+                document.getElementById('overdueFollowups').innerHTML = overdueFU.length > 0 ?
+                    `<table><tbody>${overdueFU.map(f => `
+                        <tr style="background:#fff5f5;">
+                            <td><strong>${f.leadName || 'Unknown'}</strong></td>
+                            <td>${f.type || 'WhatsApp'}</td>
+                            <td style="color:#ff4757;">${new Date(f.date).toLocaleDateString()}</td>
+                            <td>
+                                <button class="btn-whatsapp" onclick="openWhatsAppForLead('${f.leadId}')" style="padding:4px 12px;border:none;border-radius:4px;font-size:12px;">
+                                    <i class="fab fa-whatsapp"></i>
+                                </button>
+                                <button class="btn-followup" onclick="completeFollowup('${f.id}')" style="padding:4px 12px;border:none;border-radius:4px;font-size:12px;">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('')}</tbody></table>` :
+                    `<p style="padding:20px;text-align:center;color:#999;">No overdue follow-ups.</p>`;
+
+                // Recent Activity
+                const recent = allActivities.slice(0, 10);
+                document.getElementById('recentActivity').innerHTML = recent.length > 0 ?
+                    `<table><tbody>${recent.map(a => `
+                        <tr>
+                            <td style="color:#888;font-size:12px;">${a.timestamp || ''}</td>
+                            <td><strong>${a.actionBy || 'System'}</strong></td>
+                            <td>${a.actionType || ''}</td>
+                            <td style="font-size:13px;">${a.description || ''}</td>
+                            <td><span class="status-badge ${a.status === 'Error' ? 'status-lost' : 'status-won'}" style="font-size:11px;">${a.status || 'Success'}</span></td>
+                        </tr>
+                    `).join('')}</tbody></table>` :
+                    `<p style="padding:20px;text-align:center;color:#999;">No recent activity.</p>`;
+
+            } catch (error) {
+                showToast('Error loading dashboard: ' + error.message, 'error');
+            }
+            showLoading(false);
+        }
+
+        // ============================================
+        // LEADS
+        // ============================================
+        async function loadLeads() {
+            showLoading(true);
+            try {
+                const result = await callAPIGet('getLeads');
+                allLeads = result.data || [];
+                renderLeads();
+            } catch (error) {
+                showToast('Error loading leads: ' + error.message, 'error');
+            }
+            showLoading(false);
+        }
+
+        function renderLeads() {
+            const search = document.getElementById('leadSearch').value.toLowerCase();
+            const filter = document.getElementById('leadStatusFilter').value;
+
+            let filtered = allLeads;
+            if (search) {
+                filtered = filtered.filter(l =>
+                    (l.name || '').toLowerCase().includes(search) ||
+                    (l.company || '').toLowerCase().includes(search) ||
+                    (l.phone || '').includes(search)
+                );
+            }
+            if (filter !== 'all') {
+                filtered = filtered.filter(l => l.status === filter);
+            }
+
+            const tbody = document.getElementById('leadsTableBody');
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;color:#999;">No leads found.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(l => `
+                <tr>
+                    <td style="font-size:12px;color:#888;">${l.leadId || 'N/A'}</td>
+                    <td><strong>${l.name || 'Unknown'}</strong></td>
+                    <td>${l.company || '-'}</td>
+                    <td>${l.phone || '-'}</td>
+                    <td><span class="status-badge status-${(l.status || 'new').toLowerCase().replace(' ', '')}">${l.status || 'New'}</span></td>
+                    <td>
+                        <div class="table-actions">
+                            <button class="btn-whatsapp" onclick="openWhatsAppForLeadRow('${l.row || l.leadId}')" title="WhatsApp">
+                                <i class="fab fa-whatsapp"></i>
+                            </button>
+                            <button class="btn-edit" onclick="editLead('${l.leadId}')" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn-followup" onclick="openFollowupForLead('${l.leadId}')" title="Follow-up">
+                                <i class="fas fa-calendar-plus"></i>
+                            </button>
+                            <button class="btn-delete" onclick="deleteLead('${l.leadId}')" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function filterLeads() {
+            renderLeads();
+        }
+
+        // ============================================
+        // FOLLOW-UPS
+        // ============================================
+        async function loadFollowups() {
+            showLoading(true);
+            try {
+                const result = await callAPIGet('getFollowUps');
+                allFollowups = result.data || [];
+                renderFollowups();
+            } catch (error) {
+                showToast('Error loading follow-ups: ' + error.message, 'error');
+            }
+            showLoading(false);
+        }
+
+        function renderFollowups() {
+            const filter = document.getElementById('followupStatusFilter').value;
+            let filtered = allFollowups;
+            if (filter !== 'all') {
+                filtered = filtered.filter(f => f.status === filter);
+            }
+
+            const tbody = document.getElementById('followupsTableBody');
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;color:#999;">No follow-ups found.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(f => `
+                <tr>
+                    <td style="font-size:12px;color:#888;">${f.id || f.followUpId || 'N/A'}</td>
+                    <td><strong>${f.leadName || 'Unknown'}</strong></td>
+                    <td>${f.date ? new Date(f.date).toLocaleDateString() : '-'}</td>
+                    <td>${f.type || 'WhatsApp'}</td>
+                    <td><span class="status-badge ${f.status === 'Completed' ? 'status-won' : f.status === 'Pending' ? 'status-followup' : 'status-lost'}">${f.status || 'Pending'}</span></td>
+                    <td>
+                        <div class="table-actions">
+                            <button class="btn-edit" onclick="editFollowup('${f.id}')" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            ${f.status === 'Pending' ? `<button class="btn-followup" onclick="completeFollowup('${f.id}')" title="Complete">
+                                <i class="fas fa-check"></i>
+                            </button>` : ''}
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function filterFollowups() {
+            renderFollowups();
+        }
+
+        // ============================================
+        // TEMPLATES
+        // ============================================
+        async function loadTemplates() {
+            showLoading(true);
+            try {
+                const result = await callAPIGet('getTemplates');
+                allTemplates = result.data || [];
+                renderTemplates();
+            } catch (error) {
+                showToast('Error loading templates: ' + error.message, 'error');
+            }
+            showLoading(false);
+        }
+
+        function renderTemplates() {
+            const tbody = document.getElementById('templatesTableBody');
+            if (allTemplates.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;color:#999;">No templates found.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = allTemplates.map(t => `
+                <tr>
+                    <td style="font-size:12px;color:#888;">${t.id || t.templateId || 'N/A'}</td>
+                    <td><strong>${t.name || 'Unnamed'}</strong></td>
+                    <td>${t.category || 'Other'}</td>
+                    <td>${t.usageCount || 0}x</td>
+                    <td>
+                        <div class="table-actions">
+                            <button class="btn-edit" onclick="editTemplate('${t.id}')" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn-delete" onclick="deleteTemplate('${t.id}')" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // ============================================
+        // ACTIVITY
+        // ============================================
+        async function loadActivity() {
+            showLoading(true);
+            try {
+                const result = await callAPIGet('getActivityLog');
+                allActivities = result.data || [];
+                renderActivity();
+            } catch (error) {
+                showToast('Error loading activity: ' + error.message, 'error');
+            }
+            showLoading(false);
+        }
+
+        function renderActivity() {
+            const tbody = document.getElementById('activityTableBody');
+            if (allActivities.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;color:#999;">No activity recorded.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = allActivities.slice(0, 50).map(a => `
+                <tr>
+                    <td style="font-size:12px;color:#888;">${a.timestamp || ''}</td>
+                    <td>${a.actionBy || 'System'}</td>
+                    <td>${a.actionType || ''}</td>
+                    <td>${a.leadName || '-'}</td>
+                    <td style="font-size:13px;">${a.description || ''}</td>
+                    <td><span class="status-badge ${a.status === 'Error' ? 'status-lost' : 'status-won'}" style="font-size:11px;">${a.status || 'Success'}</span></td>
+                </tr>
+            `).join('');
+        }
+
+        async function clearActivityLog() {
+            if (!confirm('Are you sure you want to clear ALL activity logs?')) return;
+            showLoading(true);
+            try {
+                await callAPI('clearActivityLog');
+                showToast('Activity log cleared!');
+                loadActivity();
+            } catch (error) {
+                showToast('Error: ' + error.message, 'error');
+            }
+            showLoading(false);
+        }
+
+        // ============================================
+        // LEAD CRUD OPERATIONS
+        // ============================================
+        function openAddLeadModal() {
+            document.getElementById('leadModalTitle').textContent = 'Add New Lead';
+            document.getElementById('editLeadRow').value = '';
+            document.getElementById('leadName').value = '';
+            document.getElementById('leadCompany').value = '';
+            document.getElementById('leadPhone').value = '';
+            document.getElementById('leadEmail').value = '';
+            document.getElementById('leadSource').value = 'Website';
+            document.getElementById('leadStatus').value = 'New';
+            document.getElementById('leadNotes').value = '';
+            openModal('leadModal');
+        }
+
+        function editLead(leadId) {
+            const lead = allLeads.find(l => l.leadId === leadId);
+            if (!lead) { showToast('Lead not found', 'error'); return; }
+
+            document.getElementById('leadModalTitle').textContent = 'Edit Lead';
+            document.getElementById('editLeadRow').value = lead.row || lead.leadId;
+            document.getElementById('leadName').value = lead.name || '';
+            document.getElementById('leadCompany').value = lead.company || '';
+            document.getElementById('leadPhone').value = lead.phone || '';
+            document.getElementById('leadEmail').value = lead.email || '';
+            document.getElementById('leadSource').value = lead.source || 'Website';
+            document.getElementById('leadStatus').value = lead.status || 'New';
+            document.getElementById('leadNotes').value = lead.notes || '';
+            openModal('leadModal');
+        }
+
+        async function saveLead() {
+            const name = document.getElementById('leadName').value.trim();
+            const phone = document.getElementById('leadPhone').value.trim();
+            const leadRow = document.getElementById('editLeadRow').value;
+
+            if (!name) { showToast('Name is required', 'error'); return; }
+            if (!phone) { showToast('Phone is required', 'error'); return; }
+
+            const leadData = {
+                name: name,
+                company: document.getElementById('leadCompany').value.trim(),
+                phone: phone,
+                email: document.getElementById('leadEmail').value.trim(),
+                source: document.getElementById('leadSource').value,
+                status: document.getElementById('leadStatus').value,
+                notes: document.getElementById('leadNotes').value.trim()
+            };
+
+            showLoading(true);
+            try {
+                let result;
+                if (leadRow) {
+                    result = await callAPI('updateLead', { leadRow: leadRow, leadData: JSON.stringify(leadData) });
+                    showToast('Lead updated successfully!');
+                } else {
+                    result = await callAPI('addNewLead', { leadData: JSON.stringify(leadData) });
+                    showToast('Lead added successfully!');
+                }
+                closeModal('leadModal');
+                loadLeads();
+                loadDashboard();
+            } catch (error) {
+                showToast('Error: ' + error.message, 'error');
+            }
+            showLoading(false);
+        }
+
+        async function deleteLead(leadId) {
+            if (!confirm('Delete this lead?')) return;
+            showLoading(true);
+            try {
+                await callAPI('deleteLead', { leadId: leadId });
+                showToast('Lead deleted!');
+                loadLeads();
+                loadDashboard();
+            } catch (error) {
+                showToast('Error: ' + error.message, 'error');
+            }
+            showLoading(false);
+        }
+
+        // ============================================
+        // WHATSAPP OPERATIONS
+        // ============================================
+        function openWhatsAppForLead(leadId) {
+            const lead = allLeads.find(l => l.leadId === leadId);
+            if (!lead) { showToast('Lead not found', 'error'); return; }
+            openWhatsAppForLeadRow(lead.row || leadId);
+        }
+
+        function openWhatsAppForLeadRow(leadRow) {
+            const lead = allLeads.find(l => l.row === leadRow || l.leadId === leadRow);
+            if (!lead) { showToast('Lead not found', 'error'); return; }
+
+            document.getElementById('waLeadName').textContent = lead.name || 'Unknown';
+            document.getElementById('waLeadPhone').textContent = lead.phone || 'No phone';
+            document.getElementById('waLeadRow').value = lead.row || lead.leadId;
+            document.getElementById('waMessage').value = lead.notes || '';
+            document.getElementById('waPreview').style.display = 'none';
+            document.getElementById('waCharCount').textContent = (lead.notes || '').length;
+
+            // Load templates
+            loadWATemplates();
+            openModal('whatsappModal');
+        }
+
+        function loadWATemplates() {
+            const select = document.getElementById('waTemplate');
+            select.innerHTML = '<option value="custom">Custom Message</option>';
+            allTemplates.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t.id || t.templateId;
+                opt.textContent = t.name;
+                select.appendChild(opt);
+            });
+        }
+
+        function onWATemplateChange() {
+            const templateId = document.getElementById('waTemplate').value;
+            if (templateId === 'custom') return;
+
+            const template = allTemplates.find(t => t.id === templateId || t.templateId === templateId);
+            if (template) {
+                document.getElementById('waMessage').value = template.body || '';
+                document.getElementById('waCharCount').textContent = (template.body || '').length;
+            }
+        }
+
+        function previewWAMessage() {
+            const message = document.getElementById('waMessage').value.trim();
+            if (!message) { showToast('Please enter a message', 'error'); return; }
+
+            document.getElementById('waPreview').textContent = message;
+            document.getElementById('waPreview').style.display = 'block';
+        }
+
+        async function sendWAMessage() {
+            const message = document.getElementById('waMessage').value.trim();
+            const leadRow = document.getElementById('waLeadRow').value;
+            const templateId = document.getElementById('waTemplate').value;
+
+            if (!message) { showToast('Please enter a message', 'error'); return; }
+
+            showLoading(true);
+            try {
+                const result = await callAPI('sendWhatsApp', {
+                    leadRow: leadRow,
+                    templateId: templateId === 'custom' ? '' : templateId,
+                    customMessage: message
+                });
+
+                if (result.success) {
+                    showToast('WhatsApp opened in new tab!');
+                    if (result.whatsappUrl) {
+                        window.open(result.whatsappUrl, '_blank');
+                    }
+                    closeModal('whatsappModal');
+                    loadDashboard();
+                } else {
+                    showToast('Error: ' + (result.message || 'Unknown error'), 'error');
+                }
+            } catch (error) {
+                showToast('Error: ' + error.message, 'error');
+            }
+            showLoading(false);
+        }
+
+        // ============================================
+        // FOLLOW-UP OPERATIONS
+        // ============================================
+        function openFollowupForLead(leadId) {
+            const lead = allLeads.find(l => l.leadId === leadId);
+            if (!lead) { showToast('Lead not found', 'error'); return; }
+
+            document.getElementById('fuLeadName').textContent = lead.name || 'Unknown';
+            document.getElementById('fuLeadRow').value = lead.row || lead.leadId;
+            document.getElementById('editFollowupId').value = '';
+            document.getElementById('fuDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('fuTime').value = '10:00';
+            document.getElementById('fuType').value = 'WhatsApp';
+            document.getElementById('fuStatus').value = 'Pending';
+            document.getElementById('fuMessage').value = lead.notes || '';
+            document.getElementById('fuNotes').value = '';
+            document.getElementById('fuDeleteBtn').style.display = 'none';
+            openModal('followupModal');
+        }
+
+        function editFollowup(followupId) {
+            const fu = allFollowups.find(f => f.id === followupId || f.followUpId === followupId);
+            if (!fu) { showToast('Follow-up not found', 'error'); return; }
+
+            const lead = allLeads.find(l => l.leadId === fu.leadId);
+            document.getElementById('fuLeadName').textContent = lead ? lead.name : (fu.leadName || 'Unknown');
+            document.getElementById('fuLeadRow').value = fu.leadId;
+            document.getElementById('editFollowupId').value = fu.id || fu.followUpId;
+            document.getElementById('fuDate').value = fu.date ? new Date(fu.date).toISOString().split('T')[0] : '';
+            document.getElementById('fuTime').value = fu.time || '10:00';
+            document.getElementById('fuType').value = fu.type || 'WhatsApp';
+            document.getElementById('fuStatus').value = fu.status || 'Pending';
+            document.getElementById('fuMessage').value = fu.message || '';
+            document.getElementById('fuNotes').value = fu.notes || '';
+            document.getElementById('fuDeleteBtn').style.display = 'inline-block';
+            openModal('followupModal');
+        }
+
+        async function saveFollowup() {
+            const leadRow = document.getElementById('fuLeadRow').value;
+            const date = document.getElementById('fuDate').value;
+            const followupId = document.getElementById('editFollowupId').value;
+
+            if (!date) { showToast('Date is required', 'error'); return; }
+
+            const data = {
+                date: date,
+                time: document.getElementById('fuTime').value,
+                type: document.getElementById('fuType').value,
+                status: document.getElementById('fuStatus').value,
+                message: document.getElementById('fuMessage').value.trim(),
+                notes: document.getElementById('fuNotes').value.trim()
+            };
+
+            showLoading(true);
+            try {
+                let result;
+                if (followupId) {
+                    result = await callAPI('updateFollowUp', {
+                        followUpId: followupId,
+                        followUpData: JSON.stringify(data)
+                    });
+                    showToast('Follow-up updated!');
+                } else {
+                    result = await callAPI('createFollowUp', {
+                        leadRow: leadRow,
+                        followUpData: JSON.stringify(data)
+                    });
+                    showToast('Follow-up scheduled!');
+                }
+                closeModal('followupModal');
+                loadFollowups();
+                loadDashboard();
+            } catch (error) {
+                showToast('Error: ' + error.message, 'error');
+            }
+            showLoading(false);
+        }
+
+        async function completeFollowup(followupId) {
+            if (!confirm('Mark this follow-up as completed?')) return;
+            showLoading(true);
+            try {
+                await callAPI('completeFollowUp', { followUpId: followupId });
+                showToast('Follow-up completed!');
+                loadFollowups();
+                loadDashboard();
+            } catch (error) {
+                showToast('Error: ' + error.message, 'error');
+            }
+            showLoading(false);
+        }
+
+        async function deleteFollowup() {
+            const followupId = document.getElementById('editFollowupId').value;
+            if (!followupId || !confirm('Delete this follow-up?')) return;
+            showLoading(true);
+            try {
+                await callAPI('deleteFollowUp', { followUpId: followupId });
+                showToast('Follow-up deleted!');
+                closeModal('followupModal');
+                loadFollowups();
+                loadDashboard();
+            } catch (error) {
+                showToast('Error: ' + error.message, 'error');
+            }
+            showLoading(false);
+        }
+
+        // ============================================
+        // TEMPLATE OPERATIONS
+        // ============================================
+        function openTemplateModal(templateId) {
+            if (templateId) {
+                const t = allTemplates.find(t => t.id === templateId || t.templateId === templateId);
+                if (!t) { showToast('Template not found', 'error'); return; }
+                document.getElementById('templateModalTitle').textContent = 'Edit Template';
+                document.getElementById('editTemplateId').value = t.id || t.templateId;
+                document.getElementById('tplName').value = t.name || '';
+                document.getElementById('tplCategory').value = t.category || 'Other';
+                document.getElementById('tplBody').value = t.body || '';
+                document.getElementById('tplDeleteBtn').style.display = 'inline-block';
+            } else {
+                document.getElementById('templateModalTitle').textContent = 'New Template';
+                document.getElementById('editTemplateId').value = '';
+                document.getElementById('tplName').value = '';
+                document.getElementById('tplCategory').value = 'Introduction';
+                document.getElementById('tplBody').value = '';
+                document.getElementById('tplDeleteBtn').style.display = 'none';
+            }
+            openModal('templateModal');
+        }
+
+        function editTemplate(templateId) {
+            openTemplateModal(templateId);
+        }
+
+        async function saveTemplate() {
+            const name = document.getElementById('tplName').value.trim();
+            const body = document.getElementById('tplBody').value.trim();
+            const templateId = document.getElementById('editTemplateId').value;
+
+            if (!name) { showToast('Template name is required', 'error'); return; }
+            if (!body) { showToast('Message body is required', 'error'); return; }
+
+            const data = {
+                name: name,
+                category: document.getElementById('tplCategory').value,
+                body: body
+            };
+
+            showLoading(true);
+            try {
+                let result;
+                if (templateId) {
+                    result = await callAPI('updateTemplate', {
+                        templateId: templateId,
+                        templateData: JSON.stringify(data)
+                    });
+                    showToast('Template updated!');
+                } else {
+                    result = await callAPI('addNewTemplate', { templateData: JSON.stringify(data) });
+                    showToast('Template created!');
+                }
+                closeModal('templateModal');
+                loadTemplates();
+            } catch (error) {
+                showToast('Error: ' + error.message, 'error');
+            }
+            showLoading(false);
+        }
+
+        async function deleteTemplate(templateId) {
+            const id = templateId || document.getElementById('editTemplateId').value;
+            if (!id || !confirm('Delete this template?')) return;
+            showLoading(true);
+            try {
+                await callAPI('deleteTemplate', { templateId: id });
+                showToast('Template deleted!');
+                closeModal('templateModal');
+                loadTemplates();
+            } catch (error) {
+                showToast('Error: ' + error.message, 'error');
+            }
+            showLoading(false);
+        }
+
+        // ============================================
+        // BULK SEND
+        // ============================================
+        let bulkLeads = [];
+
+        function openBulkSendModal() {
+            document.getElementById('bulkMessage').value = '';
+            document.getElementById('bulkStatusFilter').value = 'all';
+            document.getElementById('bulkLeadsPreview').innerHTML = '<p style="color:#999;">Select filters to see leads</p>';
+            document.getElementById('bulkCount').textContent = '0 leads';
+            document.getElementById('bulkProgress').textContent = '';
+            loadBulkTemplates();
+            openModal('bulkModal');
+            filterBulkLeads();
+        }
+
+        function loadBulkTemplates() {
+            const select = document.getElementById('bulkTemplate');
+            select.innerHTML = '<option value="custom">Custom Message</option>';
+            allTemplates.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t.id || t.templateId;
+                opt.textContent = t.name;
+                select.appendChild(opt);
+            });
+        }
+
+        function onBulkTemplateChange() {
+            const templateId = document.getElementById('bulkTemplate').value;
+            if (templateId === 'custom') {
+                document.getElementById('bulkMessage').value = '';
+                return;
+            }
+            const template = allTemplates.find(t => t.id === templateId || t.templateId === templateId);
+            if (template) {
+                document.getElementById('bulkMessage').value = template.body || '';
+            }
+        }
+
+        function filterBulkLeads() {
+            const status = document.getElementById('bulkStatusFilter').value;
+            let filtered = allLeads;
+            if (status !== 'all') {
+                filtered = filtered.filter(l => l.status === status);
+            }
+            // Only leads with phone numbers
+            filtered = filtered.filter(l => l.phone);
+            bulkLeads = filtered;
+
+            const preview = document.getElementById('bulkLeadsPreview');
+            if (filtered.length === 0) {
+                preview.innerHTML = '<p style="color:#999;">No leads found with phone numbers.</p>';
+            } else {
+                preview.innerHTML = filtered.map(l =>
+                    `<div style="padding:4px 0;border-bottom:1px solid #eee;display:flex;justify-content:space-between;">
+                        <span>${l.name} (${l.phone})</span>
+                        <span style="color:#888;font-size:12px;">${l.status || 'New'}</span>
+                    </div>`
+                ).join('');
+            }
+            document.getElementById('bulkCount').textContent = filtered.length + ' leads';
+        }
+
+        // Listen to filter changes
+        document.getElementById('bulkStatusFilter').addEventListener('change', filterBulkLeads);
+
+        async function startBulkSend() {
+            const message = document.getElementById('bulkMessage').value.trim();
+            if (!message) { showToast('Please enter a message', 'error'); return; }
+            if (bulkLeads.length === 0) { showToast('No leads to send to', 'error'); return; }
+
+            if (!confirm(`Send WhatsApp to ${bulkLeads.length} leads?\n\nThis will open each in a new tab.`)) return;
+
+            const progress = document.getElementById('bulkProgress');
+            const total = bulkLeads.length;
+
+            for (let i = 0; i < bulkLeads.length; i++) {
+                const lead = bulkLeads[i];
+                progress.textContent = `Sending ${i+1}/${total}...`;
+
+                try {
+                    const result = await callAPI('sendWhatsApp', {
+                        leadRow: lead.row || lead.leadId,
+                        templateId: '',
+                        customMessage: message
+                    });
+                    if (result.success && result.whatsappUrl) {
+                        window.open(result.whatsappUrl, '_blank');
+                    }
+                    // Small delay to prevent browser blocking
+                    await new Promise(r => setTimeout(r, 500));
+                } catch (error) {
+                    showToast('Error sending to ' + lead.name, 'error');
+                }
+            }
+
+            progress.textContent = '✅ Complete!';
+            showToast(`Sent to ${total} leads!`, 'success');
+            setTimeout(() => { closeModal('bulkModal'); }, 2000);
+        }
+
+        // ============================================
+        // INITIALIZATION
+        // ============================================
+        // Set default date for followup
+        document.getElementById('fuDate').value = new Date().toISOString().split('T')[0];
+
+        // Char count for WhatsApp
+        document.getElementById('waMessage').addEventListener('input', function() {
+            document.getElementById('waCharCount').textContent = this.value.length;
+        });
+
+        // Load dashboard on start
+        loadDashboard();
+
+        console.log('WhatsApp CRM loaded successfully!');
+        console.log('Note: Replace API_URL with your Google Apps Script deployment URL');
+    </script>
+
+</body>
+</html>
