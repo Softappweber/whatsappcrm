@@ -1121,7 +1121,7 @@
         // ============================================
         // CONFIGURATION
         // ============================================
-        const API_URL = 'https://script.google.com/macros/s/AKfycbzN156i7rhzXjF0gzV_JnrXe7xgUrias0dH-S4xUJ_fyT7DYk1lf1e7grQTokKsDjaQTg/exec';
+        const API_URL = 'https://script.google.com/macros/s/AKfycbxnDC-wt83AQZ8t5Ap8ncD_97GaL3UNfMoiB1Ji1vMbWf5CtisMqF4y5NK7gprvwV-O/exec';
 
         // ============================================
         // STATE
@@ -1136,86 +1136,95 @@
         // ============================================
         // API CALLS
         // ============================================
-        function callAPI(action, data = {}) {
-            return new Promise((resolve, reject) => {
-                if (useDummyData) {
-                    resolve(handleDummyAPI(action, data));
-                    return;
+        async function callAPI(action, data = {}) {
+            if (useDummyData) {
+                const result = handleDummyAPI(action, data);
+                if (result && result.success === false) {
+                    throw new Error(result.message || result.error || 'API operation failed');
                 }
+                return result;
+            }
 
-                const params = new URLSearchParams();
-                params.append('action', action);
-                if (Object.keys(data).length > 0) {
-                    params.append('data', JSON.stringify(data));
-                }
+            const params = new URLSearchParams();
+            params.set('action', action);
+            params.set('data', JSON.stringify(data || {}));
 
-                console.log('📤 Calling API:', action, data);
+            console.log('📤 Calling API:', action, data);
 
-                fetch(API_URL, {
+            try {
+                const response = await fetch(API_URL, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
                     },
                     body: params.toString()
-                })
-                .then(response => {
-                    return response.text().then(text => {
-                        try {
-                            const json = JSON.parse(text);
-                            return json;
-                        } catch (e) {
-                            return { success: true, message: text, raw: text };
-                        }
-                    });
-                })
-                .then(result => {
-                    console.log('📥 API Response:', result);
-                    resolve(result);
-                })
-                .catch(error => {
-                    console.error('❌ API Error:', error);
-                    resolve({ success: true, data: [] });
                 });
-            });
-        }
 
-        function callAPIGet(action) {
-            return new Promise((resolve, reject) => {
-                if (useDummyData) {
-                    resolve(handleDummyAPI(action, {}));
-                    return;
+                const text = await response.text();
+                console.log('📥 Raw API response:', text);
+
+                let result;
+                try {
+                    result = JSON.parse(text);
+                } catch (e) {
+                    throw new Error('API returned non-JSON response: ' + text.substring(0, 300));
                 }
 
-                const url = API_URL + '?action=' + encodeURIComponent(action);
-                console.log('📤 API GET:', url);
+                console.log('📥 Parsed API response:', result);
 
-                fetch(url, {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/json',
-                    }
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('HTTP error! status: ' + response.status);
-                    }
-                    return response.text();
-                })
-                .then(text => {
-                    console.log('📥 Raw response:', text);
-                    try {
-                        const json = JSON.parse(text);
-                        console.log('📥 Parsed:', json);
-                        resolve(json);
-                    } catch (e) {
-                        resolve({ success: true, data: [] });
-                    }
-                })
-                .catch(error => {
-                    console.error('❌ API GET Error:', error);
-                    resolve({ success: true, data: [] });
-                });
-            });
+                if (!response.ok) {
+                    throw new Error(result.message || result.error || ('HTTP ' + response.status));
+                }
+
+                if (result && result.success === false) {
+                    throw new Error(result.message || result.error || 'API operation failed');
+                }
+
+                return result;
+            } catch (error) {
+                console.error('❌ API Error:', action, error);
+                throw error;
+            }
+        }
+
+        async function callAPIGet(action) {
+            if (useDummyData) {
+                const result = handleDummyAPI(action, {});
+                if (result && result.success === false) {
+                    throw new Error(result.message || result.error || 'API operation failed');
+                }
+                return result;
+            }
+
+            const url = API_URL + '?action=' + encodeURIComponent(action);
+            console.log('📤 API GET:', url);
+
+            try {
+                const response = await fetch(url, { method: 'GET' });
+                const text = await response.text();
+                console.log('📥 Raw GET response:', text);
+
+                let result;
+                try {
+                    result = JSON.parse(text);
+                } catch (e) {
+                    throw new Error('API returned non-JSON response: ' + text.substring(0, 300));
+                }
+
+                console.log('📥 Parsed GET response:', result);
+
+                if (!response.ok) {
+                    throw new Error(result.message || result.error || ('HTTP ' + response.status));
+                }
+                if (result && result.success === false) {
+                    throw new Error(result.message || result.error || 'API operation failed');
+                }
+
+                return result;
+            } catch (error) {
+                console.error('❌ API GET Error:', action, error);
+                throw error;
+            }
         }
 
         // ============================================
@@ -1540,6 +1549,15 @@
             showLoading(false);
         }
 
+        function escapeHTML(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
         function renderLeads() {
             const search = document.getElementById('leadSearch').value.toLowerCase();
             const filter = document.getElementById('leadStatusFilter').value;
@@ -1563,32 +1581,48 @@
                 return;
             }
 
-            tbody.innerHTML = filtered.map(l => `
+            tbody.innerHTML = filtered.map(l => {
+                const leadId = escapeHTML(l.leadId || '');
+                return `
                 <tr>
-                    <td style="font-size:12px;color:#888;">${l.leadId || 'N/A'}</td>
-                    <td><strong>${l.name || 'Unknown'}</strong></td>
-                    <td>${l.company || '-'}</td>
-                    <td>${l.phone || '-'}</td>
-                    <td><span class="status-badge status-${(l.status || 'new').toLowerCase().replace(/[^a-z]/g, '')}">${l.status || 'New'}</span></td>
+                    <td style="font-size:12px;color:#888;">${escapeHTML(l.leadId || 'N/A')}</td>
+                    <td><strong>${escapeHTML(l.name || 'Unknown')}</strong></td>
+                    <td>${escapeHTML(l.company || '-')}</td>
+                    <td>${escapeHTML(l.phone || '-')}</td>
+                    <td><span class="status-badge status-${escapeHTML((l.status || 'new').toLowerCase().replace(/[^a-z]/g, ''))}">${escapeHTML(l.status || 'New')}</span></td>
                     <td>
                         <div class="table-actions">
-                            <button class="btn-whatsapp" onclick="openWhatsAppForLead('${l.leadId}')" title="WhatsApp">
+                            <button class="btn-whatsapp" data-action="whatsapp" data-lead-id="${leadId}" title="WhatsApp">
                                 <i class="fab fa-whatsapp"></i>
                             </button>
-                            <button class="btn-edit" onclick="editLead('${l.leadId}')" title="Edit">
+                            <button class="btn-edit" data-action="edit" data-lead-id="${leadId}" title="Edit">
                                 <i class="fas fa-edit"></i>
                             </button>
-                            <button class="btn-followup" onclick="openFollowupForLead('${l.leadId}')" title="Follow-up">
+                            <button class="btn-followup" data-action="followup" data-lead-id="${leadId}" title="Follow-up">
                                 <i class="fas fa-calendar-plus"></i>
                             </button>
-                            <button class="btn-delete" onclick="deleteLead('${l.leadId}')" title="Delete">
+                            <button class="btn-delete" data-action="delete" data-lead-id="${leadId}" title="Delete">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </div>
                     </td>
-                </tr>
-            `).join('');
+                </tr>`;
+            }).join('');
         }
+
+        // Event delegation keeps dynamically rendered lead buttons reliable.
+        document.getElementById('leadsTableBody').addEventListener('click', function(event) {
+            const button = event.target.closest('button[data-action]');
+            if (!button) return;
+
+            const leadId = button.dataset.leadId;
+            const action = button.dataset.action;
+
+            if (action === 'whatsapp') openWhatsAppForLead(leadId);
+            else if (action === 'edit') editLead(leadId);
+            else if (action === 'followup') openFollowupForLead(leadId);
+            else if (action === 'delete') deleteLead(leadId);
+        });
 
         function filterLeads() {
             renderLeads();
@@ -1828,25 +1862,29 @@
         }
 
         async function deleteLead(leadId) {
+            if (!leadId) { showToast('Lead ID is missing', 'error'); return; }
             if (!confirm('Delete this lead?')) return;
+
             showLoading(true);
             try {
-                await callAPI('deleteLead', { leadId: leadId });
+                await callAPI('deleteLead', { leadId: String(leadId) });
                 showToast('Lead deleted!');
-                loadLeads();
-                loadDashboard();
+                await Promise.all([loadLeads(), loadDashboard()]);
             } catch (error) {
-                showToast('Error: ' + error.message, 'error');
+                console.error('Delete Lead Error:', error);
+                showToast('Error deleting lead: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
             }
-            showLoading(false);
         }
 
         // ============================================
         // WHATSAPP OPERATIONS
         // ============================================
-        function openWhatsAppForLead(leadId) {
-            const lead = allLeads.find(l => l.leadId === leadId);
+        async function openWhatsAppForLead(leadId) {
+            const lead = allLeads.find(l => String(l.leadId) === String(leadId));
             if (!lead) { showToast('Lead not found', 'error'); return; }
+            if (!lead.phone) { showToast('This lead has no phone number', 'error'); return; }
 
             document.getElementById('waLeadName').textContent = lead.name || 'Unknown';
             document.getElementById('waLeadPhone').textContent = lead.phone || 'No phone';
@@ -1854,9 +1892,21 @@
             document.getElementById('waMessage').value = lead.notes || '';
             document.getElementById('waPreview').style.display = 'none';
             document.getElementById('waCharCount').textContent = (lead.notes || '').length;
+            document.getElementById('waTemplate').value = 'custom';
 
-            updateTemplateDropdowns();
             openModal('whatsappModal');
+
+            // Dashboard does not load templates, so fetch them on demand.
+            if (allTemplates.length === 0) {
+                try {
+                    const result = await callAPIGet('getTemplates');
+                    allTemplates = result.data || [];
+                } catch (error) {
+                    console.error('Template load error:', error);
+                }
+            }
+            updateTemplateDropdowns();
+            document.getElementById('waTemplate').value = 'custom';
         }
 
         function onWATemplateChange() {
@@ -1884,6 +1934,12 @@
             const templateId = document.getElementById('waTemplate').value;
 
             if (!message) { showToast('Please enter a message', 'error'); return; }
+            if (!leadRow) { showToast('Lead information is missing', 'error'); return; }
+
+            // Open a blank tab immediately from the click event so popup blockers
+            // do not prevent WhatsApp from opening after the API request finishes.
+            let waWindow = null;
+            try { waWindow = window.open('', '_blank'); } catch (e) {}
 
             showLoading(true);
             try {
@@ -1893,20 +1949,30 @@
                     customMessage: message
                 });
 
-                if (result.success) {
-                    showToast('WhatsApp opened in new tab!');
-                    if (result.whatsappUrl) {
-                        window.open(result.whatsappUrl, '_blank');
-                    }
-                    closeModal('whatsappModal');
-                    loadDashboard();
-                } else {
-                    showToast('Error: ' + (result.message || 'Unknown error'), 'error');
+                if (!result.whatsappUrl) {
+                    if (waWindow && !waWindow.closed) waWindow.close();
+                    throw new Error(result.message || 'WhatsApp URL was not returned');
                 }
+
+                if (waWindow && !waWindow.closed) {
+                    waWindow.location.href = result.whatsappUrl;
+                } else {
+                    const fallback = document.createElement('a');
+                    fallback.href = result.whatsappUrl;
+                    fallback.target = '_blank';
+                    fallback.rel = 'noopener';
+                    fallback.click();
+                }
+
+                showToast('WhatsApp chat opened!');
+                closeModal('whatsappModal');
+                loadDashboard();
             } catch (error) {
+                if (waWindow && !waWindow.closed) waWindow.close();
                 showToast('Error: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
             }
-            showLoading(false);
         }
 
         // ============================================
@@ -2101,15 +2167,34 @@
         // ============================================
         let bulkLeads = [];
 
-        function openBulkSendModal() {
+        async function openBulkSendModal() {
             document.getElementById('bulkMessage').value = '';
+            document.getElementById('bulkTemplate').value = 'custom';
             document.getElementById('bulkStatusFilter').value = 'all';
-            document.getElementById('bulkLeadsPreview').innerHTML = '<p style="color:#999;">Select filters to see leads</p>';
+            document.getElementById('bulkLeadsPreview').innerHTML = '<p style="color:#999;">Loading leads...</p>';
             document.getElementById('bulkCount').textContent = '0 leads';
             document.getElementById('bulkProgress').textContent = '';
-            updateTemplateDropdowns();
-            filterBulkLeads();
             openModal('bulkModal');
+
+            try {
+                const requests = [];
+                if (!allLeads.length) requests.push(callAPIGet('getLeads'));
+                else requests.push(Promise.resolve({success:true, data:allLeads}));
+                if (!allTemplates.length) requests.push(callAPIGet('getTemplates'));
+                else requests.push(Promise.resolve({success:true, data:allTemplates}));
+
+                const [leadResult, templateResult] = await Promise.all(requests);
+                allLeads = leadResult.data || [];
+                allTemplates = templateResult.data || [];
+                updateTemplateDropdowns();
+                filterBulkLeads();
+            } catch (error) {
+                console.error('Bulk modal load error:', error);
+                document.getElementById('bulkLeadsPreview').innerHTML =
+                    '<p style="color:#ff4757;">Unable to load leads: ' + escapeHTML(error.message) + '</p>';
+                document.getElementById('bulkCount').textContent = '0 leads';
+                showToast('Unable to load bulk-send data: ' + error.message, 'error');
+            }
         }
 
         function onBulkTemplateChange() {
@@ -2118,7 +2203,7 @@
                 document.getElementById('bulkMessage').value = '';
                 return;
             }
-            const template = allTemplates.find(t => t.id === templateId || t.templateId === templateId);
+            const template = allTemplates.find(t => String(t.id || t.templateId) === String(templateId));
             if (template) {
                 document.getElementById('bulkMessage').value = template.body || '';
             }
@@ -2139,8 +2224,8 @@
             } else {
                 preview.innerHTML = filtered.map(l =>
                     `<div style="padding:4px 0;border-bottom:1px solid #eee;display:flex;justify-content:space-between;">
-                        <span>${l.name} (${l.phone})</span>
-                        <span style="color:#888;font-size:12px;">${l.status || 'New'}</span>
+                        <span>${escapeHTML(l.name || 'Unknown')} (${escapeHTML(l.phone || '')})</span>
+                        <span style="color:#888;font-size:12px;">${escapeHTML(l.status || 'New')}</span>
                     </div>`
                 ).join('');
             }
@@ -2151,36 +2236,69 @@
 
         async function startBulkSend() {
             const message = document.getElementById('bulkMessage').value.trim();
-            if (!message) { showToast('Please enter a message', 'error'); return; }
-            if (bulkLeads.length === 0) { showToast('No leads to send to', 'error'); return; }
+            const templateId = document.getElementById('bulkTemplate').value;
 
-            if (!confirm(`Send WhatsApp to ${bulkLeads.length} leads?\n\nThis will open each in a new tab.`)) return;
+            if (!message && templateId === 'custom') {
+                showToast('Please enter a message', 'error');
+                return;
+            }
+            if (bulkLeads.length === 0) {
+                showToast('No leads with phone numbers match this filter', 'error');
+                return;
+            }
+
+            if (!confirm(`Prepare WhatsApp messages for ${bulkLeads.length} leads?\n\nWhatsApp may require manual Send confirmation for each chat.`)) return;
 
             const progress = document.getElementById('bulkProgress');
             const total = bulkLeads.length;
+            let successCount = 0;
+            let failCount = 0;
+
+            // Browsers commonly block window.open() after an awaited fetch.
+            // Pre-create the tabs during the user's click, then navigate them
+            // after each API call returns its final WhatsApp URL.
+            const windows = bulkLeads.map(() => {
+                try { return window.open('', '_blank'); } catch (e) { return null; }
+            });
 
             for (let i = 0; i < bulkLeads.length; i++) {
                 const lead = bulkLeads[i];
-                progress.textContent = `Sending ${i+1}/${total}...`;
+                progress.textContent = `Preparing ${i + 1}/${total} — ${lead.name || lead.phone}`;
 
                 try {
                     const result = await callAPI('sendWhatsApp', {
                         leadRow: lead.row || lead.leadId,
-                        templateId: '',
+                        templateId: templateId === 'custom' ? '' : templateId,
                         customMessage: message
                     });
-                    if (result.success && result.whatsappUrl) {
-                        window.open(result.whatsappUrl, '_blank');
+
+                    if (result.whatsappUrl) {
+                        if (windows[i] && !windows[i].closed) {
+                            windows[i].location.href = result.whatsappUrl;
+                        } else {
+                            // Fallback if the browser blocked the pre-opened tab.
+                            const fallback = document.createElement('a');
+                            fallback.href = result.whatsappUrl;
+                            fallback.target = '_blank';
+                            fallback.rel = 'noopener';
+                            fallback.click();
+                        }
                     }
-                    await new Promise(r => setTimeout(r, 500));
+                    successCount++;
                 } catch (error) {
-                    showToast('Error sending to ' + lead.name, 'error');
+                    failCount++;
+                    if (windows[i] && !windows[i].closed) windows[i].close();
+                    console.error('Bulk send error:', lead.name, error);
                 }
+
+                progress.textContent = `Processed ${i + 1}/${total} — Success: ${successCount}, Failed: ${failCount}`;
+                await new Promise(r => setTimeout(r, 300));
             }
 
-            progress.textContent = '✅ Complete!';
-            showToast(`Sent to ${total} leads!`, 'success');
-            setTimeout(() => { closeModal('bulkModal'); }, 2000);
+            progress.textContent = `✅ Complete — ${successCount} prepared, ${failCount} failed`;
+            showToast(`Bulk send complete: ${successCount} prepared, ${failCount} failed`, failCount ? 'info' : 'success');
+            await Promise.all([loadLeads(), loadDashboard()]);
+            setTimeout(() => closeModal('bulkModal'), 2000);
         }
 
         // ============================================
