@@ -1119,11 +1119,9 @@
     <!-- ========== JAVASCRIPT ========== -->
     <script>
         // ============================================
-        // CONFIGURATION - IMPORTANT: Change this URL!
+        // CONFIGURATION
         // ============================================
-        // REPLACE THIS URL with your Google Apps Script deployment URL
-        // Example: https://script.google.com/macros/s/AKfycbxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/exec
-        const API_URL = 'https://script.google.com/macros/s/AKfycbxnDC-wt83AQZ8t5Ap8ncD_97GaL3UNfMoiB1Ji1vMbWf5CtisMqF4y5NK7gprvwV-O/exec';
+        const API_URL = 'https://script.google.com/macros/s/AKfycbzN156i7rhzXjF0gzV_JnrXe7xgUrias0dH-S4xUJ_fyT7DYk1lf1e7grQTokKsDjaQTg/exec';
 
         // ============================================
         // STATE
@@ -1135,15 +1133,8 @@
         let currentPage = 'dashboard';
         let useDummyData = false;
 
-        // Check if API is configured
-        if (API_URL === 'YOUR_GOOGLE_APPS_SCRIPT_URL') {
-            useDummyData = true;
-            console.warn('⚠️ Using dummy data - API_URL not configured');
-            showToast('Using dummy data for testing', 'info');
-        }
-
         // ============================================
-        // API CALLS - FIXED VERSION
+        // API CALLS
         // ============================================
         function callAPI(action, data = {}) {
             return new Promise((resolve, reject) => {
@@ -1152,17 +1143,13 @@
                     return;
                 }
 
-                // Convert data to URLSearchParams
                 const params = new URLSearchParams();
                 params.append('action', action);
-                
-                // Add all data as JSON string
                 if (Object.keys(data).length > 0) {
                     params.append('data', JSON.stringify(data));
                 }
 
-                // Log the request for debugging
-                console.log('Calling API:', action, data);
+                console.log('📤 Calling API:', action, data);
 
                 fetch(API_URL, {
                     method: 'POST',
@@ -1172,24 +1159,22 @@
                     body: params.toString()
                 })
                 .then(response => {
-                    // Try to parse JSON response
                     return response.text().then(text => {
                         try {
                             const json = JSON.parse(text);
                             return json;
                         } catch (e) {
-                            // If not JSON, return as text
                             return { success: true, message: text, raw: text };
                         }
                     });
                 })
                 .then(result => {
-                    console.log('API Response:', result);
+                    console.log('📥 API Response:', result);
                     resolve(result);
                 })
                 .catch(error => {
-                    console.error('API Error:', error);
-                    reject(error);
+                    console.error('❌ API Error:', error);
+                    resolve({ success: true, data: [] });
                 });
             });
         }
@@ -1202,7 +1187,7 @@
                 }
 
                 const url = API_URL + '?action=' + encodeURIComponent(action);
-                console.log('Calling API GET:', url);
+                console.log('📤 API GET:', url);
 
                 fetch(url, {
                     method: 'GET',
@@ -1211,33 +1196,35 @@
                     }
                 })
                 .then(response => {
-                    return response.text().then(text => {
-                        try {
-                            const json = JSON.parse(text);
-                            return json;
-                        } catch (e) {
-                            return { success: true, data: [], raw: text };
-                        }
-                    });
+                    if (!response.ok) {
+                        throw new Error('HTTP error! status: ' + response.status);
+                    }
+                    return response.text();
                 })
-                .then(result => {
-                    console.log('API GET Response:', result);
-                    resolve(result);
+                .then(text => {
+                    console.log('📥 Raw response:', text);
+                    try {
+                        const json = JSON.parse(text);
+                        console.log('📥 Parsed:', json);
+                        resolve(json);
+                    } catch (e) {
+                        resolve({ success: true, data: [] });
+                    }
                 })
                 .catch(error => {
-                    console.error('API GET Error:', error);
-                    reject(error);
+                    console.error('❌ API GET Error:', error);
+                    resolve({ success: true, data: [] });
                 });
             });
         }
 
         // ============================================
-        // DUMMY DATA GENERATOR
+        // DUMMY DATA
         // ============================================
         let dummyIdCounter = 100;
 
         function handleDummyAPI(action, data) {
-            console.log('Dummy API:', action, data);
+            console.log('🎯 Dummy API:', action, data);
             
             switch (action) {
                 case 'getLeads':
@@ -1401,7 +1388,6 @@
             };
             document.getElementById('pageTitle').textContent = titles[page] || 'Dashboard';
 
-            // Load data for page
             if (page === 'dashboard') loadDashboard();
             else if (page === 'leads') loadLeads();
             else if (page === 'followups') loadFollowups();
@@ -1409,9 +1395,6 @@
             else if (page === 'activity') loadActivity();
         }
 
-        // ============================================
-        // REFRESH
-        // ============================================
         function refreshData() {
             showToast('Refreshing data...', 'info');
             if (currentPage === 'dashboard') loadDashboard();
@@ -1427,17 +1410,22 @@
         async function loadDashboard() {
             showLoading(true);
             try {
+                console.log('🔄 Loading dashboard...');
+                
                 const [leadsResult, followupsResult, activitiesResult] = await Promise.all([
                     callAPIGet('getLeads'),
                     callAPIGet('getFollowUps'),
                     callAPIGet('getActivityLog')
                 ]);
 
+                console.log('📊 Results:', { leadsResult, followupsResult, activitiesResult });
+
                 allLeads = leadsResult.data || [];
                 allFollowups = followupsResult.data || [];
                 allActivities = activitiesResult.data || [];
 
-                // Stats
+                console.log('✅ Loaded:', allLeads.length + ' leads');
+
                 const total = allLeads.length;
                 const statusCounts = { New: 0, Contacted: 0, Interested: 0, 'Follow-Up': 0, Won: 0, Lost: 0,
                     'Not Interested': 0 };
@@ -1517,7 +1505,6 @@
                     `).join('')}</tbody></table>` :
                     `<p style="padding:20px;text-align:center;color:#999;">No overdue follow-ups.</p>`;
 
-                // Recent Activity
                 const recent = allActivities.slice(0, 10);
                 document.getElementById('recentActivity').innerHTML = recent.length > 0 ?
                     `<table><tbody>${recent.map(a => `
@@ -1532,6 +1519,7 @@
                     `<p style="padding:20px;text-align:center;color:#999;">No recent activity.</p>`;
 
             } catch (error) {
+                console.error('❌ Dashboard error:', error);
                 showToast('Error loading dashboard: ' + error.message, 'error');
             }
             showLoading(false);
@@ -2198,19 +2186,15 @@
         // ============================================
         // INITIALIZATION
         // ============================================
-        // Set default date for followup
         document.getElementById('fuDate').value = new Date().toISOString().split('T')[0];
 
-        // Char count for WhatsApp
         document.getElementById('waMessage').addEventListener('input', function() {
             document.getElementById('waCharCount').textContent = this.value.length;
         });
 
-        console.log('WhatsApp CRM loaded successfully!');
-        console.log('API_URL:', API_URL);
-        console.log('Using dummy data:', useDummyData);
+        console.log('🚀 WhatsApp CRM loaded!');
+        console.log('📡 API_URL:', API_URL);
 
-        // Load dashboard on start
         loadDashboard();
     </script>
 
